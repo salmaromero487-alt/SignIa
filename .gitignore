@@ -1,0 +1,16 @@
+# Entorno virtual de Python
+venv/
+.venv/
+env/
+
+# Modulos de Node en Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+
+# Archivos compilados y caché de Python
+_pycache_/
+*.pyc
+
+# Archivos de configuración del sistema
+.DS_Store
