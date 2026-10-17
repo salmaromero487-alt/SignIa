@@ -14,3 +14,12 @@ _pycache_/
 
 # Archivos de configuración del sistema
 .DS_Store
+
+# Archivos de Entorno y Secreto
+backend/.env
+.env
+
+#Datos Biométricos y Muestras de Personas (LFPDPPP)
+data/proccessed/    
+data/labels/
+data/

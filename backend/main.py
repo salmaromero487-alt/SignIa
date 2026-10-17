@@ -1,17 +1,16 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from app.db.database import Base, engine
 from app.models import dataset_master
 from app.api.v1.endpoints import predict
 
-# Instrucción para que SQLAlchemy cree la tabla en PostgreSQL al arrancar
+# Crear tablas en la base de datos al arrancar
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="SignIA API")
 
-app.include_router(predict.router, prefix="/api/v1", tags=["Predicción"])
-
-# Habiliatr CORS parapermitir peticiones desde el Ract (Vite)
+# Configuración de CORS para permitir peticiones desde React (Vite)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
@@ -20,9 +19,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Incluir las rutas con el prefijo correcto
-app.include_router(predict.router, prefix="/api/v1")
+# Incluir las rutas de predicción
+app.include_router(predict.router, prefix="/api/v1", tags=["Predicción"])
 
 @app.get("/")
 def root():
     return {"status": "Backend de SignIA conectado exitosamente a PostgreSQL"}
+
+
+    

@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+opencv-python
+mediapipe==0.10.14
+scikit-learn
+joblib
+sqlalchemy
+psycopg2-binary

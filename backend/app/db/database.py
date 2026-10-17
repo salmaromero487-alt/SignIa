@@ -1,8 +1,14 @@
+import os
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.orm import declarative_base, sessionmaker
 
-# Cadena con tu usuario y contraseña real
-DATABASE_URL = "postgresql://postgres:admin2026@localhost:5432/signia_db"
+# Cargar variables de entorno desde el archivo .env local
+load_dotenv()
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise RuntimeError("Falta la variable de entorno DATABASE_URL (revisa tu archivo .env)")
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
