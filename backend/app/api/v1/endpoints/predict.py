@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 from app.core.config import UMBRAL_CONFIANZA
 from app.db.database import get_db
-from app.models.dataset_master import DatasetMuestra
+from app.models.registro_prediccion import RegistroPrediccion
 from app.services.ml_service import predecir_sena
 from app.services.vision_service import extraer_landmarks
 
@@ -39,16 +39,16 @@ async def predict_sena(
             "message": "Seña no reconocida, repita el gesto",
         }
 
-    # Camino feliz (RF06): se persiste la muestra en la base de datos
-    muestra = DatasetMuestra(
-        glosa=clase, categoria="sin_categoria", confianza=confianza
-    )
-    db.add(muestra)
+    # Camino feliz: se persiste el resultado en la bitácora operativa (registro_predicciones)
+    registro = RegistroPrediccion(glosa_predicha=clase, confianza=confianza)
+    db.add(registro)
     db.commit()
+    db.refresh(registro)
 
     return {
         "status": "success",
         "prediction": clase,
         "confidence": round(confianza, 4),
+        "registro_id": registro.id,
         "landmarks_count": len(landmarks),
     }
