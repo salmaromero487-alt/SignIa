@@ -1,46 +1,72 @@
 import os
-import joblib
+import sys
+import csv
+import json
 import numpy as np
+import joblib
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import LeaveOneGroupOut, cross_val_score
 
-# 1. Definir la ruta donde se guardará el modelo
-MODEL_DIR = os.path.join(os.path.dirname(__file__), "app", "ml_models")
+# Asegurar la ruta para importar los servicios del backend
+sys.path.append(os.path.join(os.path.dirname(__file__), "app"))
+from services.features import normalizar_landmarks
+
+BASE_DIR = os.path.dirname(__file__)
+CSV_PATH = os.path.join(BASE_DIR, "..", "data", "labels", "dataset_master.csv")
+MODEL_DIR = os.path.join(BASE_DIR, "app", "ml_models")
 MODEL_PATH = os.path.join(MODEL_DIR, "modelo_lenguaje_senas.pkl")
 
+def cargar_datos():
+    X, y, personas = [], [], []
+    if not os.path.exists(CSV_PATH):
+        print(f"No se encontró el archivo CSV en: {CSV_PATH}")
+        return np.array(X), np.array(y), np.array(personas)
+        
+    with open(CSV_PATH, newline="", encoding="utf-8") as f:
+        for fila in csv.DictReader(f):
+            ruta_relativa = fila["ruta_archivo"]
+            # Ajustar la ruta absoluta al archivo json de la muestra
+            ruta_json = os.path.abspath(os.path.join(BASE_DIR, "..", "data", ruta_relativa))
+            
+            if not os.path.exists(ruta_json):
+                continue
+            with open(ruta_json, encoding="utf-8") as g:
+                datos = json.load(g)
+                
+            X.append(normalizar_landmarks(datos["landmarks"]))
+            y.append(fila["glosa"])
+            personas.append(fila["persona_id"])
+            
+    return np.array(X), np.array(y), np.array(personas)
 
-def generar_y_guardar_modelo():
-    # Crear el directorio si no existe
+def main():
+    print("Cargando muestras reales para entrenamiento...")
+    X, y, personas = cargar_datos()
+    
+    if len(y) == 0:
+        print("No hay muestras disponibles para entrenar. Captura datos primero.")
+        return
+        
+    print(f"Muestras cargadas: {len(y)} | Clases (Señas): {len(set(y))} | Participantes únicos: {len(set(personas))}")
+    
+    if len(set(personas)) < 2:
+        print("Advertencia: Se recomienda tener muestras de al menos 2 o 3 personas distintas para una validación robusta con LeaveOneGroupOut.")
+
+    # Inicializar clasificador de Random Forest
+    clf = RandomForestClassifier(n_estimators=200, random_state=42)
+    
+    # Validación cruzada Leave One Group Out (agrupada por persona_id)
+    if len(set(personas)) >= 2:
+        logo = LeaveOneGroupOut()
+        puntajes = cross_val_score(clf, X, y, groups=personas, cv=logo)
+        print("Exactitud por cada persona dejada fuera:", np.round(puntajes, 3))
+        print(f"Exactitud media general (Generalización): {puntajes.mean():.3f}")
+
+    # Entrenar con el 100% de los datos recolectados y guardar el modelo
+    clf.fit(X, y)
     os.makedirs(MODEL_DIR, exist_ok=True)
-
-    print("Generando estructura base del modelo de ML...")
-
-    # Crear datos sintéticos de muestra con la forma exacta (63 características por mano)
-    # 26 clases representando las letras del abecedario
-    clases = [chr(i) for i in range(ord("A"), ord("Z") + 1)]
-
-    X_dummy = []
-    y_dummy = []
-
-    # Generar muestras simuladas para cada clase para inicializar el estimador
-    np.random.seed(42)
-    for clase in clases:
-        for _ in range(10):  # 10 ejemplos por clase
-            # 63 valores flotantes simulando las coordenadas (x, y, z) normalizadas de MediaPipe
-            landmarks_simulados = np.random.uniform(0.0, 1.0, 63)
-            X_dummy.append(landmarks_simulados)
-            y_dummy.append(clase)
-
-    X_dummy = np.array(X_dummy)
-    y_dummy = np.array(y_dummy)
-
-    # 2. Inicializar y entrenar el modelo Random Forest
-    clf = RandomForestClassifier(n_estimators=100, random_state=42)
-    clf.fit(X_dummy, y_dummy)
-
-    # 3. Guardar el modelo en disco (.pkl)
     joblib.dump(clf, MODEL_PATH)
-    print(f" ¡Modelo generado y guardado exitosamente en: {MODEL_PATH}!")
-
+    print(f" ¡Modelo entrenado con éxito y guardado en: {MODEL_PATH}!")
 
 if __name__ == "__main__":
-    generar_y_guardar_modelo()
+    main()

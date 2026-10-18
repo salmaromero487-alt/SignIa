@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.models import dataset_master, registro_prediccion
 
 from app.db.database import Base, engine
 from app.models import dataset_master
